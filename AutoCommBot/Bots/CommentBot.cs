@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot.Types;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types.ReplyMarkups;
+using AutoCommBot.Providers;
 
 namespace AutoCommBot.Bots
 {
@@ -11,11 +12,14 @@ namespace AutoCommBot.Bots
     {
         private ITelegramBotClient? _bot;
         private CancellationTokenSource? _cancellationToken;
-        private static readonly ILogger<CommentBot> _logger;
+        private static ILogger<CommentBot> _logger;
+        private static ITelegramProvider _telegramProvider;
         private bool isConnected = true;
 
-        public CommentBot()
+        public CommentBot(ILogger<CommentBot> logger, ITelegramProvider telegramProvider)
         {
+            _logger = logger;
+            _telegramProvider = telegramProvider;
         }
 
         public void InitializeBot()
@@ -47,6 +51,7 @@ namespace AutoCommBot.Bots
             _logger.LogInformation("Получено обновление");
             if (update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
             {
+                if(update.Message.Date > (DateTime.UtcNow - TimeSpan.FromMinutes(1)))
                 await SendMessage(botClient, update);
             }
         }
@@ -75,7 +80,7 @@ namespace AutoCommBot.Bots
             {
                 var acceptListButtons = new List<string>
                 {
-                    "Хорошо",
+                    "Авторизироваться",
                     "Отмена"
                 };
                 await botClient.SendTextMessageAsync(update.Message.Chat,
@@ -86,6 +91,51 @@ namespace AutoCommBot.Bots
             else if (message == "/clear")
             {
                 await botClient.SendTextMessageAsync(update.Message.Chat, "Тема диалога очищена, но вы можете задать мне другой вопрос!");
+                return;
+            }
+            else if(message == "авторизироваться")
+            {
+                await botClient.SendTextMessageAsync(update.Message.Chat, "Введите ваш api_id и api_hash в одну строчку, через пробел, без запятых, в начале стоки дабавив знак #, в фомате: \n " +
+                    "\"#api_id api_hash\" \n" +
+                    "Если у вас ещё нет этих данных, то вы можете получить их перейдя по этой ссылке: https://my.telegram.org/apps");
+                return;
+            }
+            else if (message.StartsWith("#"))
+            {
+                message = message.Substring(1);
+                int position = message.IndexOf(" ");
+                var api_id = message.Substring(0, position);
+                var api_hash = message.Substring(position + 1);
+                await _telegramProvider.Initialize(api_id, api_hash);
+                await botClient.SendTextMessageAsync(update.Message.Chat, "Введите ваш номер телефона в формате: +71234567890");
+                return;
+            }
+            else if (message.StartsWith("+"))
+            {
+                //message = message.Substring(1);
+                var result = await _telegramProvider.LogIn(message);
+                await botClient.SendTextMessageAsync(update.Message.Chat, result);
+                return;
+            }
+            else if(message.StartsWith("$"))
+            {
+                message = message.Substring(1);
+                var result = await _telegramProvider.LogIn(message);
+                await botClient.SendTextMessageAsync(update.Message.Chat, result);
+                return;
+            }
+            else if (message.StartsWith("-"))
+            {
+                message = message.Substring(1);
+                var result = await _telegramProvider.LogIn(message);
+                await botClient.SendTextMessageAsync(update.Message.Chat, result);
+                return;
+            }
+            else if (message.StartsWith("!"))
+            {
+                message = message.Substring(1);
+                var result = await _telegramProvider.LogIn(message);
+                await botClient.SendTextMessageAsync(update.Message.Chat, result);
                 return;
             }
             return;
