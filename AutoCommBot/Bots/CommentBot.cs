@@ -26,7 +26,7 @@ namespace AutoCommBot.Bots
         {
             try
             {
-                _bot = new TelegramBotClient("6229570999:AAEhVHyTh4l8s03rvDzrZbVMk3g7BZ7caDs");
+                _bot = new TelegramBotClient("api_key");
                 _cancellationToken = new CancellationTokenSource();
                 var cancellationToken = _cancellationToken.Token;
                 var receiverOptions = new ReceiverOptions
